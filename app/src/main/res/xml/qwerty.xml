@@ -8,31 +8,31 @@
     <!-- Erste Reihe -->
     <Row>
         <Key android:codes="49" android:keyLabel="1" />
-        <Key android:codes="50" android:keyLabel="2\nABC" />
-        <Key android:codes="51" android:keyLabel="3\nDEF" />
+        <Key android:codes="50" android:keyLabel="2" />
+        <Key android:codes="51" android:keyLabel="3" />
         <Key android:codes="-5" android:keyLabel="DEL" /> <!-- Backspace -->
     </Row>
 
     <!-- Zweite Reihe -->
     <Row>
-        <Key android:codes="52" android:keyLabel="4\nGHI" />
-        <Key android:codes="53" android:keyLabel="5\nJKL" />
-        <Key android:codes="54" android:keyLabel="6\nMNO" />
+        <Key android:codes="52" android:keyLabel="4" />
+        <Key android:codes="53" android:keyLabel="5" />
+        <Key android:codes="54" android:keyLabel="6" />
         <Key android:codes="0" android:keyLabel="" /> <!-- Leere Taste -->
     </Row>
 
     <!-- Dritte Reihe -->
     <Row>
-        <Key android:codes="55" android:keyLabel="7\nPQRS" />
-        <Key android:codes="56" android:keyLabel="8\nTUV" />
-        <Key android:codes="57" android:keyLabel="9\nWXYZ" />
+        <Key android:codes="55" android:keyLabel="7" />
+        <Key android:codes="56" android:keyLabel="8" />
+        <Key android:codes="57" android:keyLabel="9" />
         <Key android:codes="-6" android:keyLabel="ALT" /> <!-- Alt-Taste -->
     </Row>
 
     <!-- Vierte Reihe -->
     <Row>
-        <Key android:codes="42" android:keyLabel="*\n/-_@" />
-        <Key android:codes="48" android:keyLabel="0\n!.,?" />
+        <Key android:codes="42" android:keyLabel="" />
+        <Key android:codes="48" android:keyLabel="" />
         <Key android:codes="32" android:keyLabel=" " /> <!-- Leerzeichen -->
         <Key android:codes="10" android:keyLabel="⏎" /> <!-- Enter -->
     </Row>

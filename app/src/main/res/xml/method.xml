@@ -1,0 +1,6 @@
+<input-method xmlns:android="http://schemas.android.com/apk/res/android"
+    android:settingsActivity=".SettingsActivity"
+    android:isDefault="true"
+    android:label="@string/ime_name"
+    android:icon="@drawable/ic_keyboard">
+</input-method>

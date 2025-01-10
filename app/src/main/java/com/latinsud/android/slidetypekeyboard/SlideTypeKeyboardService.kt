@@ -16,10 +16,6 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
 
     private var swipeStartX: Float = 0f
     private var swipeStartY: Float = 0f
-    private var isShifted = false
-    private var flipFlop = false;
-
-    private var coordinateMap: MutableMap<Pair<Pair<Int, Int>, Pair<Int, Int>>, Keyboard.Key> = mutableMapOf<Pair<Pair<Int, Int>, Pair<Int, Int>>, Keyboard.Key>();
 
     override fun onCreateInputView(): View {
         keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as KeyboardView
@@ -27,20 +23,14 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         keyboardView.keyboard = keyboard
         keyboardView.setOnKeyboardActionListener(this)
 
-        keyboard.keys.forEach { key -> coordinateMap[Pair(Pair(key.x, key.y),Pair(key.width, key.height))] = key };
-
-
         // Swipe-Logik hinzufügen
         keyboardView.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP || MotionEvent.ACTION_DOWN == event.action) Log.d("xx","yowwwww $event.x, $event.y");
-
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     swipeStartX = event.x
                     swipeStartY = event.y
                 }
                 MotionEvent.ACTION_UP -> {
-
                     val swipeEndX = event.x
                     val swipeEndY = event.y
                     handleSwipe(swipeStartX, swipeStartY, swipeEndX, swipeEndY)
@@ -55,36 +45,30 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         val deltaX = endX - startX
         val deltaY = endY - startY
 
-
-        val keyData = this.coordinateMap.entries.find { (coords, _) ->
-            val (pos, size) = coords;
-            val (sx, sy) = pos;
-            val (ex, ey) = size;
-
-            (startX >= sx && startX <= sx + ex) && (startY >= sy && startY <= sy + ey)
-
-        }
-
-        val strokeLength = sqrt((endX - startX) * (endX - startX) + (endY - startY) * (endY - startY))
-        val dx = endX - startX
-        val dy = endY - startY
-
-        val direction = if (abs(dx) > abs(dy)) {
-            if (dx > 0) "Rechts" else "Links"
+        val strokeLength = sqrt(deltaX * deltaX + deltaY * deltaY)
+        val direction = if (abs(deltaX) > abs(deltaY)) {
+            if (deltaX > 0) "Rechts" else "Links"
         } else {
-            if (dy > 0) "Unten" else "Oben"
+            if (deltaY > 0) "Unten" else "Oben"
         }
 
-        if (keyData != null) {
-            val (_, key) = keyData
-            val keyLabel = key.label?.toString() ?: return
-            Log.d("xxx", "$keyLabel");
-            if (strokeLength < 140) {
-                currentInputConnection.commitText(keyLabel[0].toString(), 1)
-            } else {
-                currentInputConnection.commitText(getSwipeCharacter(keyLabel, direction), 1)
-            }
+        val touchedKey = keyboard.keys.find { key ->
+            startX >= key.x && startX <= key.x + key.width &&
+                    startY >= key.y && startY <= key.y + key.height
+        }
 
+        touchedKey?.let { key ->
+            val keyLabel = key.label?.toString() ?: return
+            if (strokeLength < 100) {
+                if (keyLabel == "DEL") {
+                    currentInputConnection.deleteSurroundingText(1, 0) // Löscht den letzten Buchstaben
+                } else {
+                    currentInputConnection.commitText(keyLabel, 1)
+                }
+            } else {
+                val swipeCharacter = getSwipeCharacter(keyLabel, direction)
+                currentInputConnection.commitText(swipeCharacter, 1)
+            }
         }
     }
 
@@ -112,43 +96,55 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
                 "Links" -> "J"
                 "Oben" -> "K"
                 "Rechts" -> "L"
-                else -> "4"
+                else -> "5"
             }
             "6" -> when (direction) {
                 "Links" -> "M"
                 "Oben" -> "N"
                 "Rechts" -> "O"
-                else -> "4"
+                else -> "6"
             }
             "7" -> when (direction) {
                 "Links" -> "P"
                 "Oben" -> "Q"
                 "Rechts" -> "R"
-                else -> "4"
+                "Unten" -> "S"
+                else -> "7"
             }
             "8" -> when (direction) {
-                "Links" -> "S"
-                "Oben" -> "T"
-                "Rechts" -> "U"
-                else -> "4"
+                "Links" -> "T"
+                "Oben" -> "U"
+                "Rechts" -> "V"
+                else -> "8"
             }
             "9" -> when (direction) {
-                "Links" -> "V"
-                "Oben" -> "W"
-                "Rechts" -> "X"
-                else -> "4"
+                "Links" -> "W"
+                "Oben" -> "X"
+                "Rechts" -> "Y"
+                "Unten" -> "Z"
+                else -> "9"
             }
-            // Wiederhole dies für alle anderen Keys ...
+            "*" -> when (direction) {
+                "Links" -> "-"
+                "Oben" -> "/"
+                "Rechts" -> "_"
+                "Unten" -> "@"
+                else -> "*"
+            }
+            "0" -> when (direction) {
+                "Links" -> "."
+                "Oben" -> "!"
+                "Rechts" -> ","
+                "Unten" -> "?"
+                else -> "0"
+            }
             else -> keyLabel
         }
     }
 
     override fun onPress(primaryCode: Int) {}
     override fun onRelease(primaryCode: Int) {}
-    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
-
-    }
-
+    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {}
     override fun onText(text: CharSequence?) {}
     override fun swipeLeft() {}
     override fun swipeRight() {}

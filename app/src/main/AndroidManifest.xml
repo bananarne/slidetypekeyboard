@@ -17,6 +17,8 @@
                 android:resource="@xml/method" />
         </service>
 
+
+
         <activity
             android:name=".MainActivity"
             android:exported="true">

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
     android:keyWidth="25%p"
-    android:keyHeight="70dp"
+    android:keyHeight="10%p"
     android:horizontalGap="0dp"
     android:verticalGap="0dp">
 
@@ -10,7 +10,7 @@
         <Key android:codes="49" android:keyLabel="1" />
         <Key android:codes="50" android:keyLabel="2" />
         <Key android:codes="51" android:keyLabel="3" />
-        <Key android:codes="-5" android:keyLabel="DEL" /> <!-- Backspace -->
+        <Key android:codes="-5" android:keyLabel="DEL" /> <!-- Löschen -->
     </Row>
 
     <!-- Zweite Reihe -->
@@ -31,8 +31,8 @@
 
     <!-- Vierte Reihe -->
     <Row>
-        <Key android:codes="42" android:keyLabel="" />
-        <Key android:codes="48" android:keyLabel="" />
+        <Key android:codes="42" android:keyLabel="*" />
+        <Key android:codes="48" android:keyLabel="0" />
         <Key android:codes="32" android:keyLabel=" " /> <!-- Leerzeichen -->
         <Key android:codes="10" android:keyLabel="⏎" /> <!-- Enter -->
     </Row>

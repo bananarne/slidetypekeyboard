@@ -34,7 +34,7 @@
         <Key android:codes="42" android:keyLabel="*" />
         <Key android:codes="48" android:keyLabel="0" />
         <Key android:codes="32" android:keyLabel=" " /> <!-- Leerzeichen -->
-        <Key android:codes="10" android:keyLabel="⏎" /> <!-- Enter -->
+        <Key android:codes="10" android:keyLabel="GO" /> <!-- Enter -->
     </Row>
 
 </Keyboard>

@@ -4,10 +4,13 @@ import android.inputmethodservice.InputMethodService
 import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
 import android.os.Handler
+import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import kotlin.math.abs
 import kotlin.math.sqrt
+
 
 class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
@@ -67,18 +70,19 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         touchedKey?.let { key ->
             val keyLabel = key.label?.toString() ?: return
 
-            if (key.codes.contains(-5)) { // DEL-Taste
-                if (strokeLength < 100) deleteSurroundingText()
-                return
-            }
 
-            if (key.codes.contains(10)) { // Enter-Taste
-                handleEnterKey()
-                return
-            }
 
             // Zeichenverarbeitung für andere Tasten
             if (strokeLength < 100) {
+                if (key.codes.contains(-5)) { // DEL-Taste
+                    deleteSurroundingText()
+                    return
+                }
+
+                if (key.codes.contains(10)) { // Enter-Taste
+                    handleEnterKey()
+                    return
+                }
                 currentInputConnection.commitText(keyLabel, 1)
             } else {
                 val swipeCharacter = getSwipeCharacter(keyLabel, direction)
@@ -88,26 +92,8 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     }
 
     private fun handleEnterKey() {
-        val inputConnection = currentInputConnection
-        if (inputConnection != null) {
-            val editorInfo = currentInputEditorInfo
-            when {
-                (editorInfo.imeOptions and android.view.inputmethod.EditorInfo.IME_ACTION_DONE) != 0 -> {
-                    inputConnection.performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_DONE)
-                }
-                (editorInfo.imeOptions and android.view.inputmethod.EditorInfo.IME_ACTION_SEND) != 0 -> {
-                    inputConnection.performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_SEND)
-                }
-                (editorInfo.imeOptions and android.view.inputmethod.EditorInfo.IME_ACTION_GO) != 0 -> {
-                    inputConnection.performEditorAction(android.view.inputmethod.EditorInfo.IME_ACTION_GO)
-                }
-                else -> {
-                    inputConnection.commitText("\n", 1)
-                }
-            }
-        } else {
-            requestHideSelf(0)
-        }
+        currentInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
+        //currentInputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
     }
 
     private fun deleteSurroundingText() {

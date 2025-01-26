@@ -4,13 +4,10 @@ import android.inputmethodservice.InputMethodService
 import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
 import android.os.Handler
-import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.View
-import android.view.inputmethod.EditorInfo
 import kotlin.math.abs
 import kotlin.math.sqrt
-
 
 class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
@@ -21,7 +18,7 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     private var swipeStartY: Float = 0f
     private val deleteHandler = Handler()
     private var deleteRunnable: Runnable? = null
-    private var isDeleteKeyPressed = false
+    private var isCapsLockEnabled = false // Neue Variable für Capslock
 
     private val deleteDelay = 300L // Zeitverzögerung für kontinuierliches Löschen
 
@@ -70,20 +67,19 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         touchedKey?.let { key ->
             val keyLabel = key.label?.toString() ?: return
 
+            if (key.codes.contains(-5)) { // DEL-Taste
+                if (strokeLength < 100) deleteSurroundingText()
+                return
+            }
 
+            if (key.codes.contains(-6)) { // ALT-Taste -> Capslock
+                toggleCapsLock()
+                return
+            }
 
-            // Zeichenverarbeitung für andere Tasten
             if (strokeLength < 100) {
-                if (key.codes.contains(-5)) { // DEL-Taste
-                    deleteSurroundingText()
-                    return
-                }
-
-                if (key.codes.contains(10)) { // Enter-Taste
-                    handleEnterKey()
-                    return
-                }
-                currentInputConnection.commitText(keyLabel, 1)
+                val output = if (isCapsLockEnabled) keyLabel.uppercase() else keyLabel
+                currentInputConnection.commitText(output, 1)
             } else {
                 val swipeCharacter = getSwipeCharacter(keyLabel, direction)
                 currentInputConnection.commitText(swipeCharacter, 1)
@@ -91,9 +87,19 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         }
     }
 
-    private fun handleEnterKey() {
-        currentInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
-        //currentInputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+    private fun toggleCapsLock() {
+        isCapsLockEnabled = !isCapsLockEnabled
+        updateKeyboardCaps()
+    }
+
+    private fun updateKeyboardCaps() {
+        keyboard.keys.forEach { key ->
+            val label = key.label?.toString()
+            if (label != null && label.length == 1 && label[0].isLetter()) {
+                key.label = if (isCapsLockEnabled) label.uppercase() else label.lowercase()
+            }
+        }
+        keyboardView.invalidateAllKeys()
     }
 
     private fun deleteSurroundingText() {
@@ -113,75 +119,60 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     }
 
     private fun stopContinuousDelete() {
-        isDeleteKeyPressed = false
         deleteRunnable?.let { deleteHandler.removeCallbacks(it) }
     }
 
     private fun getSwipeCharacter(keyLabel: String, direction: String): String {
         return when (keyLabel) {
             "2" -> when (direction) {
-                "links" -> "a"
-                "oben" -> "b"
-                "rechts" -> "c"
+                "links" -> if (isCapsLockEnabled) "A" else "a"
+                "oben" -> if (isCapsLockEnabled) "B" else "b"
+                "rechts" -> if (isCapsLockEnabled) "C" else "c"
                 else -> "2"
             }
             "3" -> when (direction) {
-                "links" -> "d"
-                "oben" -> "e"
-                "rechts" -> "f"
+                "links" -> if (isCapsLockEnabled) "D" else "d"
+                "oben" -> if (isCapsLockEnabled) "E" else "e"
+                "rechts" -> if (isCapsLockEnabled) "F" else "f"
                 else -> "3"
             }
             "4" -> when (direction) {
-                "links" -> "g"
-                "oben" -> "h"
-                "rechts" -> "i"
+                "links" -> if (isCapsLockEnabled) "G" else "g"
+                "oben" -> if (isCapsLockEnabled) "H" else "h"
+                "rechts" -> if (isCapsLockEnabled) "I" else "i"
                 else -> "4"
             }
             "5" -> when (direction) {
-                "links" -> "j"
-                "oben" -> "k"
-                "rechts" -> "l"
+                "links" -> if (isCapsLockEnabled) "J" else "j"
+                "oben" -> if (isCapsLockEnabled) "K" else "k"
+                "rechts" -> if (isCapsLockEnabled) "L" else "l"
                 else -> "5"
             }
             "6" -> when (direction) {
-                "links" -> "m"
-                "oben" -> "n"
-                "rechts" -> "o"
+                "links" -> if (isCapsLockEnabled) "M" else "m"
+                "oben" -> if (isCapsLockEnabled) "N" else "n"
+                "rechts" -> if (isCapsLockEnabled) "O" else "o"
                 else -> "6"
             }
             "7" -> when (direction) {
-                "links" -> "p"
-                "oben" -> "q"
-                "rechts" -> "r"
-                "unten" -> "s"
+                "links" -> if (isCapsLockEnabled) "P" else "p"
+                "oben" -> if (isCapsLockEnabled) "Q" else "q"
+                "rechts" -> if (isCapsLockEnabled) "R" else "r"
+                "unten" -> if (isCapsLockEnabled) "S" else "s"
                 else -> "7"
             }
             "8" -> when (direction) {
-                "links" -> "t"
-                "oben" -> "u"
-                "rechts" -> "v"
+                "links" -> if (isCapsLockEnabled) "T" else "t"
+                "oben" -> if (isCapsLockEnabled) "U" else "u"
+                "rechts" -> if (isCapsLockEnabled) "V" else "v"
                 else -> "8"
             }
             "9" -> when (direction) {
-                "links" -> "w"
-                "oben" -> "x"
-                "rechts" -> "y"
-                "unten" -> "z"
+                "links" -> if (isCapsLockEnabled) "W" else "w"
+                "oben" -> if (isCapsLockEnabled) "X" else "x"
+                "rechts" -> if (isCapsLockEnabled) "Y" else "y"
+                "unten" -> if (isCapsLockEnabled) "Z" else "z"
                 else -> "9"
-            }
-            "*" -> when (direction) {
-                "links" -> "-"
-                "oben" -> "/"
-                "rechts" -> "_"
-                "unten" -> "@"
-                else -> "*"
-            }
-            "0" -> when (direction) {
-                "links" -> "."
-                "oben" -> "!"
-                "rechts" -> ","
-                "unten" -> "?"
-                else -> "0"
             }
             else -> keyLabel
         }
@@ -189,7 +180,6 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
 
     override fun onPress(primaryCode: Int) {
         if (primaryCode == -5) {
-            isDeleteKeyPressed = true
             startContinuousDelete()
         }
     }

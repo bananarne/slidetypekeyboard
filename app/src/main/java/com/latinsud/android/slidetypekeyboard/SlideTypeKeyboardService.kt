@@ -192,9 +192,56 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
                 "rechts" -> if (isCapsLockEnabled) "I" else "i"
                 else -> "4"
             }
+            "5" -> when (direction) {
+                "links" -> if (isCapsLockEnabled) "J" else "j"
+                "oben" -> if (isCapsLockEnabled) "K" else "k"
+                "rechts" -> if (isCapsLockEnabled) "L" else "l"
+                else -> "5"
+            }
+            "6" -> when (direction) {
+                "links" -> if (isCapsLockEnabled) "M" else "m"
+                "oben" -> if (isCapsLockEnabled) "N" else "n"
+                "rechts" -> if (isCapsLockEnabled) "O" else "o"
+                else -> "6"
+            }
+            "7" -> when (direction) {
+                "links" -> if (isCapsLockEnabled) "P" else "p"
+                "oben" -> if (isCapsLockEnabled) "Q" else "q"
+                "rechts" -> if (isCapsLockEnabled) "R" else "r"
+                "unten" -> if (isCapsLockEnabled) "S" else "s"
+                else -> "7"
+            }
+            "8" -> when (direction) {
+                "links" -> if (isCapsLockEnabled) "T" else "t"
+                "oben" -> if (isCapsLockEnabled) "U" else "u"
+                "rechts" -> if (isCapsLockEnabled) "V" else "v"
+                else -> "8"
+            }
+            "9" -> when (direction) {
+                "links" -> if (isCapsLockEnabled) "W" else "w"
+                "oben" -> if (isCapsLockEnabled) "X" else "x"
+                "rechts" -> if (isCapsLockEnabled) "Y" else "y"
+                "unten" -> if (isCapsLockEnabled) "Z" else "z"
+                else -> "9"
+            }
+            "*" -> when (direction) {
+                "links" -> "-"
+                "oben" -> "/"
+                "rechts" -> "_"
+                "unten" -> "@"
+                else -> "*"
+            }
+            "0" -> when (direction) {
+                "links" -> "."
+                "oben" -> "!"
+                "rechts" -> ","
+                "unten" -> "?"
+                else -> "0"
+            }
             else -> keyLabel
         }
     }
+
 
     override fun onPress(primaryCode: Int) {
         if (primaryCode == -5) {

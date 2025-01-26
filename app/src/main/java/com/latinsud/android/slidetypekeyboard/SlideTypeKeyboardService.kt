@@ -128,6 +128,8 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     }
 
     private fun handleEnterKey() {
+        currentInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
+        //currentInputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
         val inputConnection = currentInputConnection
         val editorInfo = currentInputEditorInfo
 

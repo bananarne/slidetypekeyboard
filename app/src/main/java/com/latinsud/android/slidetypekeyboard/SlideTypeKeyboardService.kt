@@ -4,8 +4,10 @@ import android.inputmethodservice.InputMethodService
 import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
 import android.os.Handler
+import android.util.Log
 import android.view.MotionEvent
 import android.view.View
+import android.view.inputmethod.EditorInfo
 import kotlin.math.abs
 import kotlin.math.sqrt
 
@@ -18,9 +20,9 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     private var swipeStartY: Float = 0f
     private val deleteHandler = Handler()
     private var deleteRunnable: Runnable? = null
-    private var isCapsLockEnabled = false // Neue Variable für Capslock
+    private var isCapsLockEnabled = false
 
-    private val deleteDelay = 300L // Zeitverzögerung für kontinuierliches Löschen
+    private val deleteDelay = 300L
 
     override fun onCreateInputView(): View {
         keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as KeyboardView
@@ -76,7 +78,10 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
                 toggleCapsLock()
                 return
             }
-
+            if (key.codes.contains(10)) { // Enter-Taste
+                handleEnterKey()
+                return
+            }
             if (strokeLength < 100) {
                 val output = if (isCapsLockEnabled) keyLabel.uppercase() else keyLabel
                 currentInputConnection.commitText(output, 1)
@@ -111,7 +116,7 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
             deleteRunnable = object : Runnable {
                 override fun run() {
                     currentInputConnection.deleteSurroundingText(1, 0)
-                    deleteHandler.postDelayed(this, 50) // Löschen alle 50ms
+                    deleteHandler.postDelayed(this, 50)
                 }
             }
         }
@@ -120,6 +125,51 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
 
     private fun stopContinuousDelete() {
         deleteRunnable?.let { deleteHandler.removeCallbacks(it) }
+    }
+
+    private fun handleEnterKey() {
+        val inputConnection = currentInputConnection
+        val editorInfo = currentInputEditorInfo
+
+        if (inputConnection == null) {
+            Log.e("KeyboardHandler", "InputConnection ist null")
+            return
+        }
+
+        if (editorInfo == null) {
+            Log.e("KeyboardHandler", "EditorInfo ist null")
+            inputConnection.commitText("\n", 1) // Fallback
+            return
+        }
+
+        // Debugging-Logs für Kontextinformationen
+        Log.d("KeyboardHandler", "IME Options: ${editorInfo.imeOptions}")
+        Log.d("KeyboardHandler", "Input Type: ${editorInfo.inputType}")
+        Log.d("KeyboardHandler", "Package: ${editorInfo.packageName}")
+
+        // Priorisierung von IME_ACTION_SEND vor IME_ACTION_DONE
+        val actionPerformed = when {
+            (editorInfo.imeOptions and EditorInfo.IME_ACTION_SEND) != 0 -> {
+                Log.d("KeyboardHandler", "IME_ACTION_SEND erkannt")
+                inputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
+            }
+            (editorInfo.imeOptions and EditorInfo.IME_ACTION_DONE) != 0 -> {
+                Log.d("KeyboardHandler", "IME_ACTION_DONE erkannt")
+                inputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE)
+            }
+            else -> {
+                Log.w("KeyboardHandler", "Keine definierte Aktion erkannt, Fallback auf Zeilenumbruch")
+                false
+            }
+        }
+
+        // Fallback auf Zeilenumbruch, wenn keine Aktion sichtbar verarbeitet wird
+        if (!actionPerformed) {
+            Log.w("KeyboardHandler", "Aktion fehlgeschlagen, Fallback auf Zeilenumbruch")
+            inputConnection.commitText("\n", 1)
+        } else {
+            Log.d("KeyboardHandler", "Aktion erfolgreich ausgeführt")
+        }
     }
 
     private fun getSwipeCharacter(keyLabel: String, direction: String): String {
@@ -141,38 +191,6 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
                 "oben" -> if (isCapsLockEnabled) "H" else "h"
                 "rechts" -> if (isCapsLockEnabled) "I" else "i"
                 else -> "4"
-            }
-            "5" -> when (direction) {
-                "links" -> if (isCapsLockEnabled) "J" else "j"
-                "oben" -> if (isCapsLockEnabled) "K" else "k"
-                "rechts" -> if (isCapsLockEnabled) "L" else "l"
-                else -> "5"
-            }
-            "6" -> when (direction) {
-                "links" -> if (isCapsLockEnabled) "M" else "m"
-                "oben" -> if (isCapsLockEnabled) "N" else "n"
-                "rechts" -> if (isCapsLockEnabled) "O" else "o"
-                else -> "6"
-            }
-            "7" -> when (direction) {
-                "links" -> if (isCapsLockEnabled) "P" else "p"
-                "oben" -> if (isCapsLockEnabled) "Q" else "q"
-                "rechts" -> if (isCapsLockEnabled) "R" else "r"
-                "unten" -> if (isCapsLockEnabled) "S" else "s"
-                else -> "7"
-            }
-            "8" -> when (direction) {
-                "links" -> if (isCapsLockEnabled) "T" else "t"
-                "oben" -> if (isCapsLockEnabled) "U" else "u"
-                "rechts" -> if (isCapsLockEnabled) "V" else "v"
-                else -> "8"
-            }
-            "9" -> when (direction) {
-                "links" -> if (isCapsLockEnabled) "W" else "w"
-                "oben" -> if (isCapsLockEnabled) "X" else "x"
-                "rechts" -> if (isCapsLockEnabled) "Y" else "y"
-                "unten" -> if (isCapsLockEnabled) "Z" else "z"
-                else -> "9"
             }
             else -> keyLabel
         }

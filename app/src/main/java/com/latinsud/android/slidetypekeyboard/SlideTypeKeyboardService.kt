@@ -4,6 +4,7 @@ import android.inputmethodservice.InputMethodService
 import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
 import android.os.Handler
+import android.text.InputType
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
@@ -13,7 +14,7 @@ import kotlin.math.sqrt
 
 class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
-    private lateinit var keyboardView: KeyboardView
+    private lateinit var keyboardView: CustomKeyboardView
     private lateinit var keyboard: Keyboard
 
     private var swipeStartX: Float = 0f
@@ -21,16 +22,23 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     private val deleteHandler = Handler()
     private var deleteRunnable: Runnable? = null
     private var isCapsLockEnabled = false
+    private var isSpecialCharMode = false
+
+    // Key-Locking State
+    private var currentPressedKey: Keyboard.Key? = null
+    private var isKeyLocked = false
+
+    // Auto-Umlaut Buffer
+    private var lastTwoChars = ""
 
     private val deleteDelay = 300L
 
     override fun onCreateInputView(): View {
-        keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as KeyboardView
+        keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as CustomKeyboardView
         keyboard = Keyboard(this, R.xml.qwerty)
         keyboardView.keyboard = keyboard
         keyboardView.setOnKeyboardActionListener(this)
 
-        // Vorschau deaktivieren
         keyboardView.isPreviewEnabled = false
 
         keyboardView.setOnTouchListener { _, event ->
@@ -38,84 +46,164 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
                 MotionEvent.ACTION_DOWN -> {
                     swipeStartX = event.x
                     swipeStartY = event.y
+
+                    val touchedKey = findKeyAtPosition(event.x, event.y)
+                    if (touchedKey != null) {
+                        currentPressedKey = touchedKey
+                        isKeyLocked = true
+                    }
+                    false
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    false
                 }
                 MotionEvent.ACTION_UP -> {
-                    val swipeEndX = event.x
-                    val swipeEndY = event.y
-                    handleKeyPressOrSwipe(swipeStartX, swipeStartY, swipeEndX, swipeEndY)
+                    if (isKeyLocked && currentPressedKey != null) {
+                        val swipeEndX = event.x
+                        val swipeEndY = event.y
+
+                        val deltaX = swipeEndX - swipeStartX
+                        val deltaY = swipeEndY - swipeStartY
+                        val strokeLength = sqrt(deltaX * deltaX + deltaY * deltaY)
+
+                        if (strokeLength >= 100) {
+                            handleKeyPressOrSwipe(swipeStartX, swipeStartY, swipeEndX, swipeEndY)
+
+                            isKeyLocked = false
+                            currentPressedKey = null
+                            return@setOnTouchListener true
+                        }
+                    }
+
+                    isKeyLocked = false
+                    currentPressedKey = null
+                    false
                 }
+                MotionEvent.ACTION_CANCEL -> {
+                    isKeyLocked = false
+                    currentPressedKey = null
+                    false
+                }
+                else -> false
             }
-            false
         }
+
         return keyboardView
+    }
+
+    private fun findKeyAtPosition(x: Float, y: Float): Keyboard.Key? {
+        return keyboard.keys.find { key ->
+            x >= key.x && x <= key.x + key.width &&
+                    y >= key.y && y <= key.y + key.height
+        }
     }
 
     private fun handleKeyPressOrSwipe(startX: Float, startY: Float, endX: Float, endY: Float) {
         val deltaX = endX - startX
         val deltaY = endY - startY
-
         val strokeLength = sqrt(deltaX * deltaX + deltaY * deltaY)
+
+        if (strokeLength < 100) return
+
         val direction = if (abs(deltaX) > abs(deltaY)) {
             if (deltaX > 0) "rechts" else "links"
         } else {
             if (deltaY > 0) "unten" else "oben"
         }
 
-        val touchedKey = keyboard.keys.find { key ->
-            startX >= key.x && startX <= key.x + key.width &&
-                    startY >= key.y && startY <= key.y + key.height
+        val touchedKey = currentPressedKey ?: return
+        val originalKeyLabel = getOriginalKeyLabelFromCode(touchedKey.codes[0])
+
+        if (touchedKey.codes.contains(-6)) {
+            when (direction) {
+                "oben" -> enableCapsLock()
+                "unten" -> disableCapsLock()
+            }
+            return
         }
 
-        touchedKey?.let { key ->
-            val keyLabel = key.label?.toString() ?: return
+        val swipeCharacter = if (isSpecialCharMode) {
+            getSpecialCharacter(originalKeyLabel, direction)
+        } else {
+            getSwipeCharacter(originalKeyLabel, direction)
+        }
+        commitTextWithUmlautCheck(swipeCharacter)
+    }
 
-            if (key.codes.contains(-5)) { // DEL-Taste
-                if (strokeLength < 100) deleteSurroundingText()
-                return
-            }
-
-            if (key.codes.contains(-6)) { // ALT-Taste -> Capslock
-                toggleCapsLock()
-                return
-            }
-            if (key.codes.contains(10)) { // Enter-Taste
-                handleEnterKey()
-                return
-            }
-            if (strokeLength < 100) {
-                val output = if (isCapsLockEnabled) keyLabel.uppercase() else keyLabel
-                currentInputConnection.commitText(output, 1)
-            } else {
-                val swipeCharacter = getSwipeCharacter(keyLabel, direction)
-                currentInputConnection.commitText(swipeCharacter, 1)
-            }
+    private fun getOriginalKeyLabelFromCode(code: Int): String {
+        return when (code) {
+            49 -> "1"
+            50 -> "2"
+            51 -> "3"
+            52 -> "4"
+            53 -> "5"
+            54 -> "6"
+            55 -> "7"
+            56 -> "8"
+            57 -> "9"
+            48 -> "0"
+            42 -> "*"
+            else -> code.toChar().toString()
         }
     }
 
-    private fun toggleCapsLock() {
-        isCapsLockEnabled = !isCapsLockEnabled
-        updateKeyboardCaps()
+    private fun commitTextWithUmlautCheck(text: String) {
+        currentInputConnection.commitText(text, 1)
+
+        lastTwoChars += text
+        if (lastTwoChars.length > 2) {
+            lastTwoChars = lastTwoChars.takeLast(2)
+        }
+
+        checkAndReplaceUmlauts()
     }
 
-    private fun updateKeyboardCaps() {
-        keyboard.keys.forEach { key ->
-            val label = key.label?.toString()
-            if (label != null && label.length == 1 && label[0].isLetter()) {
-                key.label = if (isCapsLockEnabled) label.uppercase() else label.lowercase()
-            }
+    private fun checkAndReplaceUmlauts() {
+        val replacement = when (lastTwoChars) {
+            "ae" -> "ä"
+            "oe" -> "ö"
+            "ue" -> "ü"
+            "Ae" -> "Ä"
+            "Oe" -> "Ö"
+            "Ue" -> "Ü"
+            "ss" -> "ß"
+            else -> null
         }
-        keyboardView.invalidateAllKeys()
+
+        if (replacement != null) {
+            currentInputConnection.deleteSurroundingText(2, 0)
+            currentInputConnection.commitText(replacement, 1)
+            lastTwoChars = ""
+        }
+    }
+
+    private fun toggleSpecialCharMode() {
+        isSpecialCharMode = !isSpecialCharMode
+        keyboardView.isSpecialCharMode = isSpecialCharMode
+    }
+
+    private fun enableCapsLock() {
+        isCapsLockEnabled = true
+        keyboardView.isCapsLockEnabled = isCapsLockEnabled
+    }
+
+    private fun disableCapsLock() {
+        isCapsLockEnabled = false
+        keyboardView.isCapsLockEnabled = isCapsLockEnabled
     }
 
     private fun deleteSurroundingText() {
         currentInputConnection.deleteSurroundingText(1, 0)
+        if (lastTwoChars.isNotEmpty()) {
+            lastTwoChars = lastTwoChars.dropLast(1)
+        }
     }
 
     private fun startContinuousDelete() {
         if (deleteRunnable == null) {
             deleteRunnable = object : Runnable {
                 override fun run() {
-                    currentInputConnection.deleteSurroundingText(1, 0)
+                    deleteSurroundingText()
                     deleteHandler.postDelayed(this, 50)
                 }
             }
@@ -127,9 +215,17 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         deleteRunnable?.let { deleteHandler.removeCallbacks(it) }
     }
 
+    private fun isEnterSearch(): Boolean {
+        val editorInfo = currentInputEditorInfo ?: return false
+        val inputType = editorInfo.inputType and InputType.TYPE_MASK_VARIATION
+
+        return inputType == InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT ||
+                inputType == InputType.TYPE_TEXT_VARIATION_FILTER ||
+                (editorInfo.imeOptions and EditorInfo.IME_ACTION_SEARCH) != 0 ||
+                (editorInfo.imeOptions and EditorInfo.IME_ACTION_SEND) != 0
+    }
+
     private fun handleEnterKey() {
-        currentInputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
-        //currentInputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
         val inputConnection = currentInputConnection
         val editorInfo = currentInputEditorInfo
 
@@ -140,37 +236,29 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
 
         if (editorInfo == null) {
             Log.e("KeyboardHandler", "EditorInfo ist null")
-            inputConnection.commitText("\n", 1) // Fallback
+            inputConnection.commitText("\n", 1)
             return
         }
 
-        // Debugging-Logs für Kontextinformationen
-        Log.d("KeyboardHandler", "IME Options: ${editorInfo.imeOptions}")
-        Log.d("KeyboardHandler", "Input Type: ${editorInfo.inputType}")
-        Log.d("KeyboardHandler", "Package: ${editorInfo.packageName}")
+        if (isEnterSearch()) {
+            val actionPerformed = when {
+                (editorInfo.imeOptions and EditorInfo.IME_ACTION_SEARCH) != 0 -> {
+                    inputConnection.performEditorAction(EditorInfo.IME_ACTION_SEARCH)
+                }
+                (editorInfo.imeOptions and EditorInfo.IME_ACTION_SEND) != 0 -> {
+                    inputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
+                }
+                (editorInfo.imeOptions and EditorInfo.IME_ACTION_DONE) != 0 -> {
+                    inputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE)
+                }
+                else -> false
+            }
 
-        // Priorisierung von IME_ACTION_SEND vor IME_ACTION_DONE
-        val actionPerformed = when {
-            (editorInfo.imeOptions and EditorInfo.IME_ACTION_SEND) != 0 -> {
-                Log.d("KeyboardHandler", "IME_ACTION_SEND erkannt")
-                inputConnection.performEditorAction(EditorInfo.IME_ACTION_SEND)
+            if (!actionPerformed) {
+                inputConnection.commitText("\n", 1)
             }
-            (editorInfo.imeOptions and EditorInfo.IME_ACTION_DONE) != 0 -> {
-                Log.d("KeyboardHandler", "IME_ACTION_DONE erkannt")
-                inputConnection.performEditorAction(EditorInfo.IME_ACTION_DONE)
-            }
-            else -> {
-                Log.w("KeyboardHandler", "Keine definierte Aktion erkannt, Fallback auf Zeilenumbruch")
-                false
-            }
-        }
-
-        // Fallback auf Zeilenumbruch, wenn keine Aktion sichtbar verarbeitet wird
-        if (!actionPerformed) {
-            Log.w("KeyboardHandler", "Aktion fehlgeschlagen, Fallback auf Zeilenumbruch")
-            inputConnection.commitText("\n", 1)
         } else {
-            Log.d("KeyboardHandler", "Aktion erfolgreich ausgeführt")
+            inputConnection.commitText("\n", 1)
         }
     }
 
@@ -244,6 +332,118 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         }
     }
 
+    private fun getSpecialCharacter(keyLabel: String, direction: String): String {
+        return when (keyLabel) {
+            "1" -> when (direction) {
+                "oben" -> "#"
+                "rechts" -> "]"
+                "links" -> "["
+                "unten" -> "&"
+                "tap" -> "1"
+                else -> "1"
+            }
+            "2" -> when (direction) {
+                "oben" -> "="
+                "rechts" -> ")"
+                "links" -> "("
+                "unten" -> "+"
+                "tap" -> "2"
+                else -> "2"
+            }
+            "3" -> when (direction) {
+                "oben" -> "'"
+                "rechts" -> "´"
+                "links" -> "`"
+                "unten" -> "\""
+                "tap" -> "3"
+                else -> "3"
+            }
+            "4" -> when (direction) {
+                "oben" -> ":"
+                "rechts" -> "/"
+                "links" -> "\\"
+                "unten" -> ";"
+                "tap" -> "4"
+                else -> "4"
+            }
+            "5" -> when (direction) {
+                "oben" -> "±"
+                "rechts" -> "×"
+                "links" -> "~"
+                "unten" -> "÷"
+                "tap" -> "5"
+                else -> "5"
+            }
+            "6" -> when (direction) {
+                "oben" -> "•"
+                "unten" -> "°"
+                "tap" -> "6"
+                else -> "6"
+            }
+            "7" -> when (direction) {
+                "oben" -> "£"
+                "rechts" -> "€"
+                "unten" -> "$"
+                "tap" -> "7"
+                else -> "7"
+            }
+            "8" -> when (direction) {
+                "oben" -> "^"
+                "rechts" -> ">"
+                "links" -> "<"
+                "tap" -> "8"
+                else -> "8"
+            }
+            "9" -> when (direction) {
+                "oben" -> "¡"
+                "rechts" -> "¿"
+                "links" -> "|"
+                "unten" -> "%"
+                "tap" -> "9"
+                else -> "9"
+            }
+            "*" -> when (direction) {
+                "tap" -> "*"
+                else -> "*"
+            }
+            "0" -> when (direction) {
+                "tap" -> "0"
+                else -> "0"
+            }
+            else -> keyLabel
+        }
+    }
+
+    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
+        when (primaryCode) {
+            -5 -> deleteSurroundingText()
+            -6 -> toggleSpecialCharMode()
+            10 -> handleEnterKey()
+            32 -> currentInputConnection.commitText(" ", 1)
+            in 48..57 -> {
+                val number = getOriginalKeyLabelFromCode(primaryCode)
+                val output = if (isSpecialCharMode) {
+                    getSpecialCharacter(number, "tap")
+                } else {
+                    number
+                }
+                commitTextWithUmlautCheck(output)
+            }
+            42 -> {
+                val output = if (isSpecialCharMode) {
+                    getSpecialCharacter("*", "tap")
+                } else {
+                    "*"
+                }
+                commitTextWithUmlautCheck(output)
+            }
+            else -> {
+                val char = primaryCode.toChar().toString()
+                val output = if (isCapsLockEnabled) char.uppercase() else char
+                commitTextWithUmlautCheck(output)
+            }
+        }
+    }
 
     override fun onPress(primaryCode: Int) {
         if (primaryCode == -5) {
@@ -257,7 +457,6 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         }
     }
 
-    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {}
     override fun onText(text: CharSequence?) {}
     override fun swipeLeft() {}
     override fun swipeRight() {}

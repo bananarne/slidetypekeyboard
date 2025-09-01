@@ -1,40 +1,37 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Keyboard xmlns:android="http://schemas.android.com/apk/res/android"
     android:keyWidth="25%p"
-    android:keyHeight="10%p"
-    android:horizontalGap="0dp"
-    android:verticalGap="0dp">
+    android:keyHeight="11%p"
+    android:horizontalGap="2dp"
+    android:verticalGap="2dp"
+    android:keyTextSize="18sp">
 
-    <!-- Erste Reihe -->
     <Row>
         <Key android:codes="49" android:keyLabel="1" />
-        <Key android:codes="50" android:keyLabel="2" />
-        <Key android:codes="51" android:keyLabel="3" />
-        <Key android:codes="-5" android:keyLabel="DEL" /> <!-- Löschen -->
+        <Key android:codes="50" android:keyLabel="2&#10;abc" />
+        <Key android:codes="51" android:keyLabel="3&#10;def" />
+        <Key android:codes="-5" android:keyLabel="DEL" android:isRepeatable="true" />
     </Row>
 
-    <!-- Zweite Reihe -->
     <Row>
-        <Key android:codes="52" android:keyLabel="4" />
-        <Key android:codes="53" android:keyLabel="5" />
-        <Key android:codes="54" android:keyLabel="6" />
-        <Key android:codes="0" android:keyLabel="" /> <!-- Leere Taste -->
+        <Key android:codes="52" android:keyLabel="4&#10;ghi" />
+        <Key android:codes="53" android:keyLabel="5&#10;jkl" />
+        <Key android:codes="54" android:keyLabel="6&#10;mno" />
+        <Key android:codes="-1" android:keyLabel="SYM" />
     </Row>
 
-    <!-- Dritte Reihe -->
     <Row>
-        <Key android:codes="55" android:keyLabel="7" />
-        <Key android:codes="56" android:keyLabel="8" />
-        <Key android:codes="57" android:keyLabel="9" />
-        <Key android:codes="-6" android:keyLabel="ALT" /> <!-- Alt-Taste -->
+        <Key android:codes="55" android:keyLabel="7&#10;pqrs" />
+        <Key android:codes="56" android:keyLabel="8&#10;tuv" />
+        <Key android:codes="57" android:keyLabel="9&#10;wxyz" />
+        <Key android:codes="-6" android:keyLabel="CAPS" />
     </Row>
 
-    <!-- Vierte Reihe -->
     <Row>
-        <Key android:codes="42" android:keyLabel="*" />
-        <Key android:codes="48" android:keyLabel="0" />
-        <Key android:codes="32" android:keyLabel=" " /> <!-- Leerzeichen -->
-        <Key android:codes="10" android:keyLabel="GO" /> <!-- Enter -->
+        <Key android:codes="42" android:keyLabel="*" android:keyWidth="25%p" />
+        <Key android:codes="48" android:keyLabel="0" android:keyWidth="25%p" />
+        <Key android:codes="32" android:keyLabel="SPACE" android:keyWidth="25%p" />
+        <Key android:codes="10" android:keyLabel="ENTER" android:keyWidth="25%p" />
     </Row>
 
 </Keyboard>

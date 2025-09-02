@@ -11,16 +11,31 @@ class CustomKeyboardView @JvmOverloads constructor(
     attrs: AttributeSet? = null
 ) : KeyboardView(context, attrs) {
 
+    var currentTheme = 0
+        set(value) {
+            field = value
+            updateThemeColors()
+            invalidate()
+        }
+
+    // Theme-Farben werden dynamisch gesetzt
+    private var bgColor = Color.DKGRAY
+    private var borderColor = Color.GRAY
+    private var numberColor = Color.YELLOW
+    private var letterColor = Color.WHITE
+    private var specialColor = Color.CYAN
+    private var keyTextColor = Color.WHITE
+
     var isSpecialCharMode = false
         set(value) {
             field = value
-            invalidate() // Automatisches Neuzeichnen
+            invalidate()
         }
 
     var isCapsLockEnabled = false
         set(value) {
             field = value
-            invalidate() // Automatisches Neuzeichnen
+            invalidate()
         }
 
     private val numberPaint = Paint().apply {
@@ -34,7 +49,7 @@ class CustomKeyboardView @JvmOverloads constructor(
     private val letterPaint = Paint().apply {
         color = Color.WHITE
         textAlign = Paint.Align.CENTER
-        textSize = 60f
+        textSize = 61f
         typeface = Typeface.DEFAULT_BOLD
         isAntiAlias = true
     }
@@ -47,8 +62,46 @@ class CustomKeyboardView @JvmOverloads constructor(
         isAntiAlias = true
     }
 
+    init {
+        updateThemeColors()
+    }
+
+    private fun updateThemeColors() {
+        when (currentTheme) {
+            0 -> { // Dark Theme
+                bgColor = Color.DKGRAY
+                borderColor = Color.GRAY
+                numberColor = Color.YELLOW
+                letterColor = Color.WHITE
+                specialColor = Color.CYAN
+                keyTextColor = Color.WHITE
+            }
+            1 -> { // Light Theme
+                bgColor = Color.WHITE
+                borderColor = Color.DKGRAY
+                numberColor = Color.rgb(255, 140, 0) // Orange
+                letterColor = Color.BLACK
+                specialColor = Color.rgb(0, 100, 200) // Blau
+                keyTextColor = Color.BLACK
+            }
+            2 -> { // Modern Theme
+                bgColor = Color.rgb(45, 45, 50)
+                borderColor = Color.rgb(80, 80, 90)
+                numberColor = Color.rgb(0, 200, 150) // Türkis
+                letterColor = Color.rgb(200, 200, 210)
+                specialColor = Color.rgb(255, 100, 150) // Pink
+                keyTextColor = Color.rgb(200, 200, 210)
+            }
+        }
+
+        // Paint-Objekte aktualisieren
+        numberPaint.color = numberColor
+        letterPaint.color = letterColor
+        specialCharPaint.color = specialColor
+    }
+
     override fun onDraw(canvas: Canvas) {
-        // NUR unser Custom-Drawing, kein Standard-Layout
+        // Komplett eigenes Drawing
         drawCustomLayout(canvas)
     }
 
@@ -57,15 +110,14 @@ class CustomKeyboardView @JvmOverloads constructor(
 
         try {
             for (key in keyboard.keys) {
-                // Tastenhintergrund zeichnen
+                // Tastenhintergrund
                 drawKeyBackground(canvas, key)
 
                 // Inhalt je nach Taste
                 when (key.codes[0]) {
                     in 50..57 -> drawNumberKey(canvas, key) // Zahlen 2-9
                     48, 42 -> drawSpecialNumberKey(canvas, key) // 0 und *
-                    49 -> drawSimpleKey(canvas, key, "1") // 1 bleibt einfach
-                    else -> drawSimpleKey(canvas, key) // Alle anderen Tasten
+                    else -> drawSimpleKey(canvas, key) // Alle anderen
                 }
             }
         } catch (e: Exception) {
@@ -83,18 +135,20 @@ class CustomKeyboardView @JvmOverloads constructor(
         )
 
         val backgroundPaint = Paint().apply {
-            color = Color.DKGRAY
+            color = bgColor
             style = Paint.Style.FILL
         }
 
         val borderPaint = Paint().apply {
-            color = Color.GRAY
+            color = borderColor
             style = Paint.Style.STROKE
             strokeWidth = 2f
         }
 
-        canvas.drawRoundRect(keyRect, 8f, 8f, backgroundPaint)
-        canvas.drawRoundRect(keyRect, 8f, 8f, borderPaint)
+        val cornerRadius = if (currentTheme == 2) 12f else 8f
+
+        canvas.drawRoundRect(keyRect, cornerRadius, cornerRadius, backgroundPaint)
+        canvas.drawRoundRect(keyRect, cornerRadius, cornerRadius, borderPaint)
     }
 
     private fun drawNumberKey(canvas: Canvas, key: Keyboard.Key) {
@@ -106,10 +160,8 @@ class CustomKeyboardView @JvmOverloads constructor(
         canvas.drawText(number, centerX, centerY + 8f, numberPaint)
 
         if (isSpecialCharMode) {
-            // Sonderzeichen anzeigen
             drawSpecialChars(canvas, number, centerX, centerY)
         } else {
-            // Buchstaben anzeigen
             drawLetters(canvas, number, centerX, centerY)
         }
     }
@@ -135,7 +187,7 @@ class CustomKeyboardView @JvmOverloads constructor(
             canvas.drawText(letter, centerX + 60f, centerY + 8f, letterPaint)
         }
 
-        // Unten (nur für 7 und 9)
+        // Unten (für 7 und 9)
         if (letters.size > 3) {
             val letter = if (isCapsLockEnabled) letters[3].uppercase() else letters[3]
             canvas.drawText(letter, centerX, centerY + 65f, letterPaint)
@@ -183,6 +235,46 @@ class CustomKeyboardView @JvmOverloads constructor(
         }
     }
 
+    private fun drawSimpleKey(canvas: Canvas, key: Keyboard.Key) {
+        val centerX = key.x + key.width / 2f
+        val centerY = key.y + key.height / 2f
+
+        val textPaint = Paint().apply {
+            color = keyTextColor // Verwendet Theme-Farbe
+            textAlign = Paint.Align.CENTER
+            textSize = 42f
+            typeface = Typeface.DEFAULT_BOLD
+            isAntiAlias = true
+        }
+
+        val label = when (key.codes[0]) {
+            49 -> "1"
+            51 -> "3"
+            -5 -> "DEL"
+            52 -> "4"
+            53 -> "5"
+            54 -> "6"
+            -1 -> "😀"
+            55 -> "7"
+            56 -> "8"
+            57 -> "9"
+            -6 -> {
+                when {
+                    isSpecialCharMode -> "SYM"
+                    isCapsLockEnabled -> "ON"
+                    else -> "off"
+                }
+            }
+            42 -> "*"
+            48 -> "0"
+            32 -> "SPACE"
+            10 -> "ENTER"
+            else -> key.label?.toString() ?: ""
+        }
+
+        canvas.drawText(label, centerX, centerY + 8f, textPaint)
+    }
+
     private fun getLettersForNumber(number: String): List<String> {
         return when (number) {
             "2" -> listOf("a", "b", "c")
@@ -191,7 +283,7 @@ class CustomKeyboardView @JvmOverloads constructor(
             "5" -> listOf("j", "k", "l")
             "6" -> listOf("m", "n", "o")
             "7" -> listOf("p", "q", "r", "s")
-            "8" -> listOf("t", "u", "v")
+            "8" -> listOf("t", "u", "v", "ß")
             "9" -> listOf("w", "x", "y", "z")
             else -> emptyList()
         }
@@ -217,55 +309,5 @@ class CustomKeyboardView @JvmOverloads constructor(
             "*" -> mapOf("links" to "-", "oben" to "/", "rechts" to "_", "unten" to "@")
             else -> emptyMap()
         }
-    }
-
-    private fun isEnterSearch(): Boolean {
-        // Einfache Implementierung - das wird vom Service übernommen
-        return false
-    }
-
-    private fun drawSimpleKey(canvas: Canvas, key: Keyboard.Key, customLabel: String? = null) {
-        val centerX = key.x + key.width / 2f
-        val centerY = key.y + key.height / 2f
-
-        val textPaint = Paint().apply {
-            color = Color.WHITE
-            textAlign = Paint.Align.CENTER
-            textSize = 42f  // 50% größer als vorher (28f)
-            typeface = Typeface.DEFAULT_BOLD
-            isAntiAlias = true
-        }
-
-        // Label verwenden - entweder custom oder aus der XML/Code
-        val label = customLabel ?: when (key.codes[0]) {
-            49 -> "1"
-            51 -> "3"
-            -5 -> "DEL"
-            52 -> "4"
-            53 -> "5"
-            54 -> "6"
-            -1 -> "SYM"
-            55 -> "7"
-            56 -> "8"
-            57 -> "9"
-            -6 -> {
-                // CAPS-Taste zeigt aktuellen Status an - mit DEBUG
-                when {
-                    isSpecialCharMode -> "SYM" // War ABC
-                    isCapsLockEnabled -> "ON" // War CAPS
-                    else -> "off" // War caps
-                }
-            }
-            42 -> "*"
-            48 -> "0"
-            32 -> "SPACE"
-            10 -> {
-                // Enter-Taste zeigt Kontext an
-                if (isEnterSearch()) "SEND" else "ENTER"
-            }
-            else -> key.label?.toString() ?: ""
-        }
-
-        canvas.drawText(label, centerX, centerY + 8f, textPaint)
     }
 }

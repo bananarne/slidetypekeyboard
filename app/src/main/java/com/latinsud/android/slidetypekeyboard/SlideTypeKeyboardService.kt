@@ -31,6 +31,11 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     // Auto-Umlaut Buffer
     private var lastTwoChars = ""
 
+    // Theme System
+    private var currentTheme = 0
+    private var longPressStartTime = 0L
+    private val longPressThreshold = 500L
+
     private val deleteDelay = 300L
 
     override fun onCreateInputView(): View {
@@ -166,7 +171,6 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
             "Ae" -> "Ä"
             "Oe" -> "Ö"
             "Ue" -> "Ü"
-            "ss" -> "ß"
             else -> null
         }
 
@@ -185,6 +189,35 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     private fun enableCapsLock() {
         isCapsLockEnabled = true
         keyboardView.isCapsLockEnabled = isCapsLockEnabled
+    }
+
+    private fun openEmojiKeyboard() {
+        try {
+            val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+            inputMethodManager.showInputMethodPicker()
+        } catch (e: Exception) {
+            try {
+                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
+                intent.data = android.net.Uri.parse("content://com.android.inputmethod.latin/emoji")
+                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
+                startActivity(intent)
+            } catch (e2: Exception) {
+                currentInputConnection.commitText("😀", 1)
+            }
+        }
+    }
+
+    private fun cycleTheme() {
+        currentTheme = (currentTheme + 1) % 3
+        keyboardView.currentTheme = currentTheme
+
+        val themeName = when (currentTheme) {
+            0 -> "Dark"
+            1 -> "Light"
+            2 -> "Modern"
+            else -> "Unknown"
+        }
+        android.widget.Toast.makeText(this, "Theme: $themeName", android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun disableCapsLock() {
@@ -305,6 +338,7 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
                 "links" -> if (isCapsLockEnabled) "T" else "t"
                 "oben" -> if (isCapsLockEnabled) "U" else "u"
                 "rechts" -> if (isCapsLockEnabled) "V" else "v"
+                "unten" -> "ß"
                 else -> "8"
             }
             "9" -> when (direction) {
@@ -418,6 +452,7 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         when (primaryCode) {
             -5 -> deleteSurroundingText()
             -6 -> toggleSpecialCharMode()
+            -1 -> openEmojiKeyboard() // SYM-Taste öffnet Emoji-Keyboard
             10 -> handleEnterKey()
             32 -> currentInputConnection.commitText(" ", 1)
             in 48..57 -> {
@@ -446,14 +481,21 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     }
 
     override fun onPress(primaryCode: Int) {
-        if (primaryCode == -5) {
-            startContinuousDelete()
+        when (primaryCode) {
+            -5 -> startContinuousDelete()
+            -1 -> longPressStartTime = System.currentTimeMillis()
         }
     }
 
     override fun onRelease(primaryCode: Int) {
-        if (primaryCode == -5) {
-            stopContinuousDelete()
+        when (primaryCode) {
+            -5 -> stopContinuousDelete()
+            -1 -> {
+                val pressDuration = System.currentTimeMillis() - longPressStartTime
+                if (pressDuration >= longPressThreshold) {
+                    cycleTheme()
+                }
+            }
         }
     }
 

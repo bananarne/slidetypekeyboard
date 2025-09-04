@@ -1,6 +1,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.latinsud.android.slidetypekeyboard">
 
+    <uses-permission android:name="android.permission.BIND_INPUT_METHOD" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
     <application
         android:theme="@style/AppTheme"
         android:label="SlideType Keyboard"
@@ -17,8 +20,6 @@
                 android:resource="@xml/method" />
         </service>
 
-
-
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -29,5 +30,4 @@
         </activity>
     </application>
 
-    <uses-permission android:name="android.permission.BIND_INPUT_METHOD" />
 </manifest>

@@ -191,22 +191,6 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         keyboardView.isCapsLockEnabled = isCapsLockEnabled
     }
 
-    private fun openEmojiKeyboard() {
-        try {
-            val inputMethodManager = getSystemService(INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
-            inputMethodManager.showInputMethodPicker()
-        } catch (e: Exception) {
-            try {
-                val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
-                intent.data = android.net.Uri.parse("content://com.android.inputmethod.latin/emoji")
-                intent.flags = android.content.Intent.FLAG_ACTIVITY_NEW_TASK
-                startActivity(intent)
-            } catch (e2: Exception) {
-                currentInputConnection.commitText("😀", 1)
-            }
-        }
-    }
-
     private fun cycleTheme() {
         currentTheme = (currentTheme + 1) % 3
         keyboardView.currentTheme = currentTheme
@@ -452,7 +436,7 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         when (primaryCode) {
             -5 -> deleteSurroundingText()
             -6 -> toggleSpecialCharMode()
-            -1 -> openEmojiKeyboard() // SYM-Taste öffnet Emoji-Keyboard
+            -1 -> cycleTheme() // SYM-Taste wechselt Theme
             10 -> handleEnterKey()
             32 -> currentInputConnection.commitText(" ", 1)
             in 48..57 -> {
@@ -491,10 +475,8 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
         when (primaryCode) {
             -5 -> stopContinuousDelete()
             -1 -> {
-                val pressDuration = System.currentTimeMillis() - longPressStartTime
-                if (pressDuration >= longPressThreshold) {
-                    cycleTheme()
-                }
+                // Theme-Wechsel erfolgt jetzt direkt bei onKey
+                // Kein Lang-Drücken mehr nötig
             }
         }
     }

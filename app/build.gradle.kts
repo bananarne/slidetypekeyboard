@@ -5,12 +5,13 @@ plugins {
 
 android {
     namespace = "com.latinsud.android.slidetypekeyboard"
-    compileSdk = 34
+    compileSdk = 36
+    buildToolsVersion = "36.0.0"
 
     defaultConfig {
         applicationId = "com.latinsud.android.slidetypekeyboard"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 30
         versionCode = 1
         versionName = "1.0"
 
@@ -36,8 +37,9 @@ android {
         jvmTarget = "11"
     }
 
-    viewBinding {
-        enable = true
+    buildFeatures {
+        viewBinding = false
+        dataBinding = false
     }
 }
 

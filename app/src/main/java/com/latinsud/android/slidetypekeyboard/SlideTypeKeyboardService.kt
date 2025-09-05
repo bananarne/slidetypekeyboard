@@ -39,10 +39,18 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     private val deleteDelay = 300L
 
     override fun onCreateInputView(): View {
-        keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as CustomKeyboardView
+        val containerView = layoutInflater.inflate(R.layout.keyboard_with_emoji_bar, null)
+        keyboardView = containerView.findViewById(R.id.keyboard)
+        val emojiSwipeBar = containerView.findViewById<EmojiSwipeBar>(R.id.emojiSwipeBar)
+        
         keyboard = Keyboard(this, R.xml.qwerty)
         keyboardView.keyboard = keyboard
         keyboardView.setOnKeyboardActionListener(this)
+        
+        // Handle emoji selection
+        emojiSwipeBar.onEmojiClickListener = { emoji ->
+            currentInputConnection.commitText(emoji, 1)
+        }
 
         keyboardView.isPreviewEnabled = false
 
@@ -93,7 +101,7 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
             }
         }
 
-        return keyboardView
+        return containerView
     }
 
     private fun findKeyAtPosition(x: Float, y: Float): Keyboard.Key? {
@@ -192,13 +200,18 @@ class SlideTypeKeyboardService : InputMethodService(), KeyboardView.OnKeyboardAc
     }
 
     private fun cycleTheme() {
-        currentTheme = (currentTheme + 1) % 3
+        currentTheme = (currentTheme + 1) % 8
         keyboardView.currentTheme = currentTheme
 
         val themeName = when (currentTheme) {
             0 -> "Dark"
             1 -> "Light"
             2 -> "Modern"
+            3 -> "Neon"
+            4 -> "Ocean"
+            5 -> "Sunset"
+            6 -> "Forest"
+            7 -> "Purple"
             else -> "Unknown"
         }
         android.widget.Toast.makeText(this, "Theme: $themeName", android.widget.Toast.LENGTH_SHORT).show()
